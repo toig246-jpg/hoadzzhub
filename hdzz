@@ -1,0 +1,101 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AdminPlayerTracker : MonoBehaviour
+{
+    public Camera playerCamera;
+    public float fovAngle = 60f;
+    public float maxDistance = 100f;
+    public LayerMask playerLayer;
+
+    private readonly List<Transform> targets = new();
+
+    void Update()
+    {
+        FindPlayers();
+    }
+
+    void FindPlayers()
+    {
+        targets.Clear();
+
+        Collider[] players = Physics.OverlapSphere(
+            playerCamera.transform.position,
+            maxDistance,
+            playerLayer
+        );
+
+        foreach (Collider player in players)
+        {
+            Transform head = player.transform.Find("Head");
+
+            if (head == null)
+                continue;
+
+            Vector3 direction =
+                head.position - playerCamera.transform.position;
+
+            float angle = Vector3.Angle(
+                playerCamera.transform.forward,
+                direction
+            );
+
+            if (angle <= fovAngle * 0.5f)
+                targets.Add(head);
+        }
+    }
+
+    public Transform GetClosestTarget()
+    {
+        Transform closest = null;
+        float closestAngle = float.MaxValue;
+
+        foreach (Transform target in targets)
+        {
+            Vector3 direction =
+                target.position - playerCamera.transform.position;
+
+            float angle = Vector3.Angle(
+                playerCamera.transform.forward,
+                direction
+            );
+
+            if (angle < closestAngle)
+            {
+                closestAngle = angle;
+                closest = target;
+            }
+        }
+
+        return closest;
+    }
+
+    void OnDrawGizmos()
+    {
+        if (playerCamera == null)
+            return;
+
+        Gizmos.color = Color.white;
+
+        Gizmos.DrawRay(
+            playerCamera.transform.position,
+            playerCamera.transform.forward * maxDistance
+        );
+
+        foreach (Transform target in targets)
+        {
+            if (target == null)
+                continue;
+
+            Gizmos.DrawLine(
+                playerCamera.transform.position,
+                target.position
+            );
+
+            Gizmos.DrawWireSphere(
+                target.position,
+                0.12f
+            );
+        }
+    }
+}
